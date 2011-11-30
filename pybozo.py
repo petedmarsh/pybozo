@@ -1,8 +1,11 @@
 #!/usr/bin/env python
+import re
 import urllib2
 import BeautifulSoup
 import pygoogle
 
+
+PATTERNS = [ '(?P<hash>%s):(?P<plain>.+)']
 
 google = pygoogle.SearchAPI()
 
@@ -41,7 +44,30 @@ def getText(url):
 	soup = BeautifulSoup.BeautifulSoup( connection.read() )
 	tags = soup.findAll(text = True)
 	return tags
-	
 
+def findHash(hash, text):
+	"""Attempts to find a hash code and it's plaintext in some text.
+	
+	Parameters
+		
+		hash: str
+			The hash to find
+			
+		text: str
+			The text to find the hash and it's plaintext within
+	
+	Returns
+		
+		The plaintext of the hash or None if it could not be found
+	
+	"""
+	
+	hash = str(hash)
+	
+	for pattern in PATTERNS:
+		p = re.compile(pattern % hash)
+		match = p.search(text)
+		if match:
+			return match.group('plain')
 
 	
