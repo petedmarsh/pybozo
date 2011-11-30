@@ -5,7 +5,7 @@ import BeautifulSoup
 import pygoogle
 
 
-PATTERNS = [ '%s:(?P<plain>.+)']
+PATTERNS = [ '(?P<hash>%s):(?P<plain>.+)']
 
 google = pygoogle.SearchAPI()
 
