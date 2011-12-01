@@ -77,11 +77,12 @@ def findHash(hash, text, verifier):
 			
 			plain = match.group('plain')
 			
-			if verifier:
-				isCorrect = verifier(plain, hash)
+			for possibleMatch in [plain, plain.rstrip(), plain.lstrip(), plain.strip()]:
+				if verifier:
+					isCorrect = verifier(possibleMatch, hash)
 				
-				if isCorrect:
-					return plain
+					if isCorrect:
+						return plain
 
 def md5Verifier(plain, hash):
 	"""Verifies that the MD5 hash of the given plan text
@@ -102,8 +103,5 @@ def md5Verifier(plain, hash):
 	"""
 	h = hashlib.md5()
 	h.update(plain)
-	return h.digest == hash
-					
-
-
+	return h.hexdigest() == hash
 	
