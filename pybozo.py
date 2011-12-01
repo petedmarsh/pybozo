@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import hashlib
 import re
 import urllib2
 import BeautifulSoup
@@ -45,8 +46,8 @@ def getText(url):
 	tags = soup.findAll(text = True)
 	return tags
 
-def findHash(hash, text):
-	"""Attempts to find a hash code and it's plaintext in some text.
+def findHash(hash, text, verifier):
+	"""Attempts to find a hash code and it's plain text in some text.
 	
 	Parameters
 		
@@ -54,8 +55,13 @@ def findHash(hash, text):
 			The hash to find
 			
 		text: str
-			The text to find the hash and it's plaintext within
-	
+			The text to find the hash and it's plain text within
+		
+		verifier: callable
+			A callable which takes two strs as an arguments, the hash
+			and the possible plain text. The verifier must return True
+			if the given plain text is correct and False otherwise.
+		
 	Returns
 		
 		The plaintext of the hash or None if it could not be found
@@ -68,6 +74,36 @@ def findHash(hash, text):
 		p = re.compile(pattern % hash)
 		match = p.search(text)
 		if match:
-			return match.group('plain')
+			
+			plain = match.group('plain')
+			
+			if verifier:
+				isCorrect = verifier(plain, hash)
+				
+				if isCorrect:
+					return plain
+
+def md5Verifier(plain, hash):
+	"""Verifies that the MD5 hash of the given plan text
+	is equal to a specified hash i.e. does md5(plain) == hash
+	
+	Parameters
+	
+		plain: str
+			The plain text to check
+		
+		hash: str	
+			The hash to check against
+	
+	Return
+	
+		True if hash is the MD5 of plain, False otherwise
+	
+	"""
+	h = hashlib.md5()
+	h.update(plain)
+	return h.digest == hash
+					
+
 
 	
