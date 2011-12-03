@@ -104,9 +104,7 @@ def findHash(hash, text, verifier):
 		p = re.compile(pattern % hash)
 		match = p.search(text)
 		if match:
-			print 'possible match'
 			plain = match.group('plain')
-			print plain
 			for possibleMatch in [plain, plain.rstrip(), plain.lstrip(), plain.strip()]:
 				if verifier:
 					isCorrect = verifier(possibleMatch, hash)
@@ -142,6 +140,5 @@ def crack(type, hash, userAgent = None):
 			if plain:
 				return plain
 		except urllib2.HTTPError, e:
-			print e
 			continue 
 	
