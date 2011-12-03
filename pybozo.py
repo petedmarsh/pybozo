@@ -5,10 +5,35 @@ import urllib2
 import BeautifulSoup
 import pygoogle
 
-
-PATTERNS = [ '(?P<hash>%s):(?P<plain>.+)']
-
 google = pygoogle.SearchAPI()
+
+PATTERNS = [  '(?P<hash>%s):(?P<plain>.+)',
+		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
+		]
+
+def md5Verifier(plain, hash):
+	"""Verifies that the MD5 hash of the given plan text
+	is equal to a specified hash i.e. does md5(plain) == hash
+	
+	Parameters
+	
+		plain: str
+			The plain text to check
+		
+		hash: str	
+			The hash to check against
+	
+	Return
+	
+		True if hash is the MD5 of plain, False otherwise
+	
+	"""
+	h = hashlib.md5()
+	h.update(plain)
+	return h.hexdigest() == hash
+	
+HASH_VERIFIERS = { 'md5' : md5Verifier }
+
 
 def search(hash):
 	"""Performs a Google web search for the given hash code
@@ -40,11 +65,11 @@ def getText(url):
 		All of the text from the web page as a str
 	
 	"""
-
 	connection = urllib2.urlopen( str(url) )
 	soup = BeautifulSoup.BeautifulSoup( connection.read() )
 	tags = soup.findAll(text = True)
-	return tags
+	text = reduce(lambda tag,text : tag + str(text), tags, '')
+	return text
 
 def findHash(hash, text, verifier):
 	"""Attempts to find a hash code and it's plain text in some text.
@@ -84,24 +109,35 @@ def findHash(hash, text, verifier):
 					if isCorrect:
 						return plain
 
-def md5Verifier(plain, hash):
-	"""Verifies that the MD5 hash of the given plan text
-	is equal to a specified hash i.e. does md5(plain) == hash
+def crack(type, hash):
+	"""Attempts to find the plain text for the given hash.
 	
 	Parameters
 	
-		plain: str
-			The plain text to check
+		type: str
+			The type of the hash
 		
-		hash: str	
-			The hash to check against
-	
-	Return
-	
-		True if hash is the MD5 of plain, False otherwise
+		hash: str
+			The hash to crack
 	
 	"""
-	h = hashlib.md5()
-	h.update(plain)
-	return h.hexdigest() == hash
+	hash = str(hash)
+	type = str(type).lower()
 	
+	if type not in HASH_VERIFIERS:
+		raise ValueError('Hash type % is not supported.' % type)
+		
+	verifier = HASH_VERIFIERS[type]
+	
+	results = search(hash)
+	for url in results:
+		print url
+		try:
+			text = getText(url)
+			print text
+			exit()
+			plain = findHash(hash, text, verifier)
+			if plain:
+				return plain
+		except urllib2.HTTPError:
+			continue 
