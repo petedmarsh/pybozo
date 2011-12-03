@@ -8,7 +8,7 @@ import pygoogle
 google = pygoogle.SearchAPI()
 
 PATTERNS = [  '(?P<hash>%s):(?P<plain>.+)',
-		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
+		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*?)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
 		]
 
 def md5Verifier(plain, hash):
@@ -52,7 +52,7 @@ def search(hash):
 	urls = [result.url for result in google.webSearch(str(hash))]
 	return urls
 	
-def getText(url):
+def getText(url, userAgent = None):
 	"""Gets all of the text on a web page.
 	
 	Parameters
@@ -65,7 +65,12 @@ def getText(url):
 		All of the text from the web page as a str
 	
 	"""
-	connection = urllib2.urlopen( str(url) )
+	headers = {}
+	if userAgent:
+		headers['User-Agent'] = str(userAgent)
+	
+	request = urllib2.Request(str(url), headers = headers)
+	connection = urllib2.urlopen(request)
 	soup = BeautifulSoup.BeautifulSoup( connection.read() )
 	tags = soup.findAll(text = True)
 	text = reduce(lambda tag,text : tag + str(text), tags, '')
@@ -99,9 +104,9 @@ def findHash(hash, text, verifier):
 		p = re.compile(pattern % hash)
 		match = p.search(text)
 		if match:
-			
+			print 'possible match'
 			plain = match.group('plain')
-			
+			print plain
 			for possibleMatch in [plain, plain.rstrip(), plain.lstrip(), plain.strip()]:
 				if verifier:
 					isCorrect = verifier(possibleMatch, hash)
@@ -109,7 +114,7 @@ def findHash(hash, text, verifier):
 					if isCorrect:
 						return plain
 
-def crack(type, hash):
+def crack(type, hash, userAgent = None):
 	"""Attempts to find the plain text for the given hash.
 	
 	Parameters
@@ -131,13 +136,12 @@ def crack(type, hash):
 	
 	results = search(hash)
 	for url in results:
-		print url
 		try:
-			text = getText(url)
-			print text
-			exit()
+			text = getText(url, userAgent)
 			plain = findHash(hash, text, verifier)
 			if plain:
 				return plain
-		except urllib2.HTTPError:
+		except urllib2.HTTPError, e:
+			print e
 			continue 
+	
