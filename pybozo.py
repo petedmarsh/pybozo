@@ -1,13 +1,13 @@
 #!/usr/bin/env python
+import argparse
 import hashlib
 import re
 import urllib2
 import BeautifulSoup
 import pygoogle
 
-google = pygoogle.SearchAPI()
-
-PATTERNS = [  '(?P<hash>%s):(?P<plain>.+)',
+PATTERNS = [  '(?P<plain>.+)\s+(?P<hash>%s)', 
+		      '(?P<hash>%s):(?P<plain>.+)',
 		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*?)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
 		]
 
@@ -33,24 +33,6 @@ def md5Verifier(plain, hash):
 	return h.hexdigest() == hash
 	
 HASH_VERIFIERS = { 'md5' : md5Verifier }
-
-
-def search(hash):
-	"""Performs a Google web search for the given hash code
-	
-	Parameters
-		
-		hash: str
-			A hash code
-		
-	Returns
-		
-		A list of URLs of pages containing the hash
-	
-	"""
-	
-	urls = [result.url for result in google.webSearch(str(hash))]
-	return urls
 	
 def getText(url, userAgent = None):
 	"""Gets all of the text on a web page.
@@ -102,8 +84,9 @@ def findHash(hash, text, verifier):
 	
 	for pattern in PATTERNS:
 		p = re.compile(pattern % hash)
-		match = p.search(text)
-		if match:
+		matches = p.finditer(text)
+		
+		for match in matches:
 			plain = match.group('plain')
 			for possibleMatch in [plain, plain.rstrip(), plain.lstrip(), plain.strip()]:
 				if verifier:
@@ -112,7 +95,7 @@ def findHash(hash, text, verifier):
 					if isCorrect:
 						return plain
 
-def crack(type, hash, userAgent = None):
+def crack(type, hash, urls, userAgent = None):
 	"""Attempts to find the plain text for the given hash.
 	
 	Parameters
@@ -124,6 +107,7 @@ def crack(type, hash, userAgent = None):
 			The hash to crack
 	
 	"""
+	urls = urls or []
 	hash = str(hash)
 	type = str(type).lower()
 	
@@ -132,8 +116,7 @@ def crack(type, hash, userAgent = None):
 		
 	verifier = HASH_VERIFIERS[type]
 	
-	results = search(hash)
-	for url in results:
+	for url in urls:
 		try:
 			text = getText(url, userAgent)
 			plain = findHash(hash, text, verifier)
@@ -141,4 +124,28 @@ def crack(type, hash, userAgent = None):
 				return plain
 		except urllib2.HTTPError, e:
 			continue 
+
+def main(hash, googleAPIKey = None, **kwargs):
+	google = pygoogle.SearchAPI(key = googleAPIKey)
+	
+	urls = [result.url for result in google.webSearch(str(hash))]
+	
+	result = crack('md5', hash, urls)
+	if result:
+		print result
+	else:
+		print 'No plain text found.'
+
+if __name__ == '__main__':
+	
+	parser = argparse.ArgumentParser()
+	
+	parser.add_argument('hash', action = 'store', type = str)
+	parser.add_argument('-g', '--google-api-key', action = 'store', dest = 'googleAPIKey', type = str)
+	
+	arguments = parser.parse_args()
+	
+	arguments = vars(arguments)
+	
+	main(**arguments)
 	
