@@ -1,38 +1,80 @@
 #!/usr/bin/env python
 import argparse
 import hashlib
+import itertools
 import re
 import urllib2
 import BeautifulSoup
 import pygoogle
 
-PATTERNS = [  '(?P<plain>.+)\s+(?P<hash>%s)', 
+class MD5Cracker(object):
+	
+	
+	PATTERNS = [  '(?P<plain>.+)\s+(?P<hash>%s)', 
 		      '(?P<hash>%s):(?P<plain>.+)',
 		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*?)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
 		]
 
-def md5Verifier(plain, hash):
-	"""Verifies that the MD5 hash of the given plan text
-	is equal to a specified hash i.e. does md5(plain) == hash
-	
-	Parameters
-	
-		plain: str
-			The plain text to check
+	def __init__(self, patterns = None):
+		self.patterns = patterns or self.PATTERNS
 		
-		hash: str	
-			The hash to check against
+	def matches(self, hash, text):
+		"""Attempts to find a hash code and it's plain text in some text.
 	
-	Return
+		Parameters
+			
+			hash: str
+				The hash to find
+			
+			text: str
+				The text to find the hash and it's plain text within
 	
-		True if hash is the MD5 of plain, False otherwise
+		
+		Returns
+		
+			A set of plain text matches, where each element hashes to the
+			provided hash and all elements are unique (will usually contain
+			one element, but it is possible that a collision case has been found)
 	
-	"""
-	h = hashlib.md5()
-	h.update(plain)
-	return h.hexdigest() == hash
+		"""
 	
-HASH_VERIFIERS = { 'md5' : md5Verifier }
+		hash = str(hash)
+		
+		possibleMatches = set()
+		
+		for pattern in self.patterns:
+			p = re.compile(pattern % hash)
+			matches = p.finditer(text)
+			
+			for match in matches:
+				plain = match.group('plain')
+				possibleMatches.update([plain, plain.rstrip(), plain.lstrip(), plain.strip()])
+		
+		matches = itertools.ifilter(lambda plain: self.verify(plain, hash), possibleMatches)
+		
+		return matches
+		
+	
+	def verify(self, plain, hash):
+		"""Verifies that the MD5 hash of the given plan text
+		is equal to a specified hash i.e. does md5(plain) == hash
+			
+		Parameters
+			
+			plain: str
+				The plain text to check
+				
+			hash: str	
+				The hash to check against
+				
+		Return
+				
+			True if hash is the MD5 of plain, False otherwise
+				
+		"""
+		h = hashlib.md5()
+		h.update(plain)
+		return h.hexdigest() == hash
 	
 def getText(url, userAgent = None):
 	"""Gets all of the text on a web page.
@@ -58,94 +100,67 @@ def getText(url, userAgent = None):
 	text = reduce(lambda tag,text : tag + str(text), tags, '')
 	return text
 
-def findHash(hash, text, verifier):
-	"""Attempts to find a hash code and it's plain text in some text.
+
+def main(hash, cracker, googleAPIKey = None, userAgent = None, **kwargs):
+	"""Find the plain text of a hash using the power of Google
 	
 	Parameters
-		
+	
 		hash: str
-			The hash to find
-			
-		text: str
-			The text to find the hash and it's plain text within
+			The hash to find the plain text for
 		
-		verifier: callable
-			A callable which takes two strs as an arguments, the hash
-			and the possible plain text. The verifier must return True
-			if the given plain text is correct and False otherwise.
+		cracker: pybozo.Cracker
+			The cracker which will look for the plain text of 
+			the hash in some text. Currently only pybozo.MD5Cracker
+			exists, but anything which implements it's interface
+			will work
 		
+		googleAPIKey: str [Optional]
+			Google search API key
+		
+		userAgent: str [Optional]
+			A user agent string to pass when downloading a web page.
+			Some sites (e.g. Wikipedia) automatically reject requests
+			which pass Python's default user agent string.
+	
 	Returns
 		
-		The plaintext of the hash or None if it could not be found
-	
+		A set of plain text matches for the given hash.
+		
 	"""
 	
-	hash = str(hash)
-	
-	for pattern in PATTERNS:
-		p = re.compile(pattern % hash)
-		matches = p.finditer(text)
-		
-		for match in matches:
-			plain = match.group('plain')
-			for possibleMatch in [plain, plain.rstrip(), plain.lstrip(), plain.strip()]:
-				if verifier:
-					isCorrect = verifier(possibleMatch, hash)
-				
-					if isCorrect:
-						return plain
-
-def crack(type, hash, urls, userAgent = None):
-	"""Attempts to find the plain text for the given hash.
-	
-	Parameters
-	
-		type: str
-			The type of the hash
-		
-		hash: str
-			The hash to crack
-	
-	"""
-	urls = urls or []
-	hash = str(hash)
-	type = str(type).lower()
-	
-	if type not in HASH_VERIFIERS:
-		raise ValueError('Hash type % is not supported.' % type)
-		
-	verifier = HASH_VERIFIERS[type]
-	
-	for url in urls:
-		try:
-			text = getText(url, userAgent)
-			plain = findHash(hash, text, verifier)
-			if plain:
-				return plain
-		except urllib2.HTTPError, e:
-			continue 
-
-def main(hash, googleAPIKey = None, **kwargs):
 	google = pygoogle.SearchAPI(key = googleAPIKey)
 	
 	urls = [result.url for result in google.webSearch(str(hash))]
 	
-	result = crack('md5', hash, urls)
-	if result:
-		print result
-	else:
-		print 'No plain text found.'
+	for url in urls:
+		try:
+			text = getText(url, userAgent)
+			matches = cracker.matches(hash, text)
+			if matches:
+				for match in matches:
+					print match
+				return matches
+		except urllib2.HTTPError, e:
+			continue 
 
 if __name__ == '__main__':
 	
+	CRACKERS = {'md5' : MD5Cracker }
+	
 	parser = argparse.ArgumentParser()
+	parser.set_defaults(cracker = 'md5')
 	
 	parser.add_argument('hash', action = 'store', type = str)
 	parser.add_argument('-g', '--google-api-key', action = 'store', dest = 'googleAPIKey', type = str)
+	parser.add_argument('-t', '--hash-type', action = 'store', dest = 'cracker', type = str, choices = CRACKERS)
+	parser.add_argument('-u', '--user-agent', action = 'store', dest = 'userAgent', type = str)
 	
 	arguments = parser.parse_args()
 	
 	arguments = vars(arguments)
+	
+	arguments['cracker'] = CRACKERS[arguments['cracker']]()
 	
 	main(**arguments)
 	
