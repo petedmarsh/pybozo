@@ -25,15 +25,15 @@ the original source - thank you whoever you are!
 		hash                  The hash to crack.
 
 	optional arguments:
-		-h, --help            show this help message and exit
+		-h, --help		show this help message and exit
 		-g GOOGLEAPIKEY, --google-api-key GOOGLEAPIKEY
-                        A Google API key to pass when making a search. Not
-                        required but highly recomended
+					A Google API key to pass when making a search. Not
+					required but highly recomended
 		-t {md5}, --hash-type {md5}
-                        The type of the hash to be cracked.
+					The type of the hash to be cracked.
 		-u USERAGENT, --user-agent USERAGENT
-                        A User-Agent string to pass to websites that are
-                        scraped for potential plain text.
+					A User-Agent string to pass to websites that are
+					scraped for potential plain text.
 
 ### Example
 
