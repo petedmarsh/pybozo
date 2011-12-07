@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+
+"""A Python implementation of BozoCrack
+
+	https://github.com/juuso/BozoCrack
+
+Performs a Google search to find the plain text for a given hash
+(which turns out to be a lot more effective than you think it would!)
+
+"""
+
 import argparse
 import hashlib
 import itertools
@@ -6,6 +16,13 @@ import re
 import urllib2
 import BeautifulSoup
 import pygoogle
+
+__author__ = "Peter Marsh"
+__copyright__ = "Copyright 2011, Peter Marsh"
+__licence__ = "Apache 2.0"
+__version__ = "0.0.1"
+__maintainer__ = "Peter Marsh"
+__email__ = "pete.d.marsh@gmail.com"
 
 class MD5Cracker(object):
 	
