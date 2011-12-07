@@ -13,9 +13,9 @@ import argparse
 import hashlib
 import itertools
 import re
+import urllib
 import urllib2
 import BeautifulSoup
-import pygoogle
 
 __author__ = "Peter Marsh"
 __copyright__ = "Copyright 2011, Peter Marsh"
@@ -23,6 +23,61 @@ __licence__ = "Apache 2.0"
 __version__ = "0.0.1"
 __maintainer__ = "Peter Marsh"
 __email__ = "pete.d.marsh@gmail.com"
+
+class PyGoogle(object):
+	"""A very simple interface to Google's REST search API it is intended
+	as a backup for when pygoogle is not installed.
+	
+	"""
+	
+	class Result(object):
+		"""A very simple wrapper around object which provides a 
+		url attribute. The main body of the code uses the url attribute
+		of pygoogle.Search, this is to mimic that.
+		"""
+		def __init__(self, url):
+			self.url = url
+	
+	def __init__(self):
+		self.key = None
+		self.urlPattern = re.compile('"url"\s*:\s*"(?P<url>[^"]+)?"')
+		
+		
+	def SearchAPI(self, key = None):
+		if key:
+			self.key = str(key)
+		return self
+		
+	def webSearch(self, hash):
+		
+		parameters = {'q' : str(hash), 'v' : '1.0' }
+		if self.key:
+			parameters['key'] = str(self.key)
+		
+		parameters = urllib.urlencode(parameters)
+		
+		
+		apiURL = 'https://ajax.googleapis.com/ajax/services/search/web?' + parameters
+		
+		results = []
+		
+		try:
+			connection = urllib2.urlopen(apiURL)
+			response = connection.read()
+			for url in self.urlPattern.finditer(response):
+				result = self.Result(url.group('url'))
+				results.append(result)
+			
+		except:
+			pass
+		
+		return results
+		
+try:
+	import pygoogle
+except ImportError, e:
+	pygoogle = PyGoogle()
+		
 
 class MD5Cracker(object):
 	
@@ -168,10 +223,10 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.set_defaults(cracker = 'md5')
 	
-	parser.add_argument('hash', action = 'store', type = str)
-	parser.add_argument('-g', '--google-api-key', action = 'store', dest = 'googleAPIKey', type = str)
-	parser.add_argument('-t', '--hash-type', action = 'store', dest = 'cracker', type = str, choices = CRACKERS)
-	parser.add_argument('-u', '--user-agent', action = 'store', dest = 'userAgent', type = str)
+	parser.add_argument('hash', action = 'store', type = str, help = 'The hash to crack.')
+	parser.add_argument('-g', '--google-api-key', action = 'store', dest = 'googleAPIKey', type = str, help = 'A Google API key to pass when making a search. Not required but highly recomended')
+	parser.add_argument('-t', '--hash-type', action = 'store', dest = 'cracker', type = str, choices = CRACKERS, help = 'The type of the hash to be cracked.')
+	parser.add_argument('-u', '--user-agent', action = 'store', dest = 'userAgent', type = str, help = 'A User-Agent string to pass to websites that are scraped for potential plain text.')
 	
 	arguments = parser.parse_args()
 	
