@@ -3,10 +3,8 @@
 pybozo is a cracker which uses Google searches to find the
 plain text of a hash.
 
-Direct inspiration is BozoCrack, which is a very similar program
+Direct inspiration is [BozoCrack](https://github.com/juuso/BozoCrack), which is a very similar program
 written in Ruby.
-
-	https://github.com/juuso/BozoCrack
 	
 I do remember reading a long time ago that Google had managed
 to index enough pages with MD5 hashes on to make this possible,
