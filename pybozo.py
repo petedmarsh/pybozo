@@ -70,7 +70,7 @@ class PyGoogle(object):
 			
 		except:
 			pass
-		
+		print results
 		return results
 		
 try:
@@ -84,7 +84,7 @@ class MD5Cracker(object):
 	
 	PATTERNS = [  '(?P<plain>.+)\s+(?P<hash>%s)', 
 		      '(?P<hash>%s):(?P<plain>.+)',
-		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*?)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?',
+		      '(md5|MD5)\s*\(("|\')?(?P<plain>.*?)("|\')?\)\s*(=|:)\s*("|\')?(?P<hash>%s)("|\')?'
 		]
 
 	def __init__(self, patterns = None):
@@ -121,9 +121,8 @@ class MD5Cracker(object):
 			for match in matches:
 				plain = match.group('plain')
 				possibleMatches.update([plain, plain.rstrip(), plain.lstrip(), plain.strip()])
-		
-		matches = itertools.ifilter(lambda plain: self.verify(plain, hash), possibleMatches)
-		
+				
+		matches = list(itertools.ifilter(lambda plain: self.verify(plain, hash), possibleMatches))
 		return matches
 		
 	
@@ -213,17 +212,14 @@ def main(hash, cracker, googleAPIKey = None, userAgent = None, **kwargs):
 	google = pygoogle.SearchAPI(key = googleAPIKey)
 	
 	urls = [result.url for result in google.webSearch(str(hash))]
-	
 	for url in urls:
 		try:
 			text = getText(url, userAgent)
 			matches = cracker.matches(hash, text)
-			if matches:
-				for match in matches:
-					print match
+			if len(matches):
 				return matches
-		except urllib2.HTTPError, e:
-			continue 
+		except:
+			continue
 
 if __name__ == '__main__':
 	
@@ -243,5 +239,9 @@ if __name__ == '__main__':
 	
 	arguments['cracker'] = CRACKERS[arguments['cracker']]()
 	
-	main(**arguments)
+	results = main(**arguments)
+	
+	if results:
+		for result in results:
+			print result
 	
