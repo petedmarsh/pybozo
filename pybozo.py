@@ -89,7 +89,7 @@ class MD5Cracker(object):
 
 	def __init__(self, patterns = None):
 		self.patterns = patterns or self.PATTERNS
-		
+
 	def matches(self, hash, text):
 		"""Attempts to find a hash code and it's plain text in some text.
 	
@@ -147,7 +147,16 @@ class MD5Cracker(object):
 		h = hashlib.md5()
 		h.update(plain)
 		return h.hexdigest() == hash
+
+class SHA1Cracker(MD5Cracker):
 	
+	PATTERNS = ['(sha1|SHA1)\s*\(\s*("|\')(?P<plain>.+)("|\')\s*\)\s*=\s*(?P<hash>%s)']
+	
+	def verify(self, plain, hash):
+		h = hashlib.sha1()
+		h.update(plain)
+		return hexdigest() == hash
+
 def getText(url, userAgent = None):
 	"""Gets all of the text on a web page.
 	
@@ -218,7 +227,7 @@ def main(hash, cracker, googleAPIKey = None, userAgent = None, **kwargs):
 
 if __name__ == '__main__':
 	
-	CRACKERS = {'md5' : MD5Cracker }
+	CRACKERS = {'md5' : MD5Cracker, 'sha1' : SHA1Cracker }
 	
 	parser = argparse.ArgumentParser()
 	parser.set_defaults(cracker = 'md5')
