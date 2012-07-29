@@ -37,5 +37,5 @@ the original source - thank you whoever you are!
 
 ### Example
 
-	python pybozo.py 5f4dcc3b5aa765d61d8327deb882cf99
-	password
+	python pybozo.py ec0e2603172c73a8b644bb9456c1ff6e
+	batman
